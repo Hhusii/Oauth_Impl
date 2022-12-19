@@ -1,0 +1,10 @@
+{
+  "sampleData": {
+    "e64fa96f-3c68-4655-a929-34bba007cca7": {
+      "vars-Acct_no": "sample_data/defaultnumbertype.json"
+    },
+    "1b8d0eb6-c459-480c-b774-a14915cd4eba": {
+      "payload": "sample_data/list_defaultnumbertype.dwl"
+    }
+  }
+}

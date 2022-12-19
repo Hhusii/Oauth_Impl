@@ -1,0 +1,29 @@
+{
+  "configs": [
+    "Oauth_Impl.xml"
+  ],
+  "secureProperties": [],
+  "redeploymentEnabled": true,
+  "name": "com.mycompany:transactionapi-6:1.0.0-SNAPSHOT",
+  "minMuleVersion": "4.4.0",
+  "requiredProduct": "MULE_EE",
+  "classLoaderModelLoaderDescriptor": {
+    "id": "mule",
+    "attributes": {
+      "exportedPackages": [],
+      "exportedResources": [
+        "application-types.xml",
+        "eif-file",
+        "examples/response.json",
+        "flatfileconfig.properties",
+        "flatfileschema.ffd",
+        "log4j2.xml",
+        "Oauth_Impl.xml"
+      ]
+    }
+  },
+  "bundleDescriptorLoader": {
+    "id": "mule",
+    "attributes": {}
+  }
+}
