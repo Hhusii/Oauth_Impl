@@ -1,0 +1,48 @@
+form: FLATFILE
+structures:
+- id: 'TransDemo'
+  name: Transaction Demo
+  data:
+  - { idRef: 'Header' }
+  - { idRef: 'Txn Record', count: '>1' }
+  - { idRef: 'Trailer' }
+segments:
+- id: 'Header'
+  name: "File Header Record"
+  values:
+  - { name: 'Constant', type: String, length: 3, tagValue: 'HDR' }
+  - { name: 'End to End ID or UUID', type: String, length: 32 }
+  - { name: 'File Type', type: String, length: 8 }
+  - { name: 'BIC', type: String, length: 11 }
+  - { name: 'Total no of Transactions', type: Integer, format: { justify: zeroes }, length: 8 }
+  - { name: 'Total Amount', type: Integer, format: { justify: zeroes }, length: 16 }
+- id: 'Txn Record'
+  name: "Txn Body Field Specification Record"
+  values:
+  - { name: 'End to End ID or UUID', type: String, length: 32 }
+  - { name: 'OFI Reference Number', type: String, length: 35 }
+  - { name: 'Service Level or Priority Code', type: String, length: 4, tagValue: 'NURG' }
+  - { name: 'Category Purpose Code', type: String, length: 4 }
+  - { name: 'Txn Currency', type: String, length: 3 }
+  - { name: 'Txn Amount', type: Integer, format: { justify: zeroes }, length: 16 }
+  - { name: 'Charge Bearer', type: String, length: 4 }
+  - { name: 'Remitter Name', type: String, length: 140 }
+  - { name: 'Remitter Address', type: String, length: 200 }
+  - { name: 'Remitter Bank BIC', type: String, length: 11 }
+  - { name: 'Remitter Account No', type: Integer, format: { justify: zeroes }, length: 35 }
+  - { name: 'Beneficiary Name', type: String, length: 140 }
+  - { name: 'Beneficiary Address', type: String, length: 200 }
+  - { name: 'Beneficiary Bank BIC', type: String, length: 11 }
+  - { name: 'Beneficiary Account No', type: Integer, format: { justify: zeroes }, length: 35 }
+  - { name: 'Original end to end or UUID', type: String, length: 32 }
+  - { name: 'RFI Reference Number or Original OFI Reference Number', type: String, length: 35 }
+  - { name: 'OFI Customer Reference Number', type: String, length: 35 } 
+  - { name: 'RFI Customer Reference Number', type: String, length: 35 }
+  - { name: 'Instructions', type: String, length: 200 }
+- id: 'Trailer'
+  name: "File Trailer Record"
+  values:
+  - { name: 'Constant', type: String, length: 3, tagValue: 'TRL' }
+  - { name: 'End to End ID or UUID', type: String, length: 32 }
+  - { name: 'Signature', type: String, length: 64 }
+ 

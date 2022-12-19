@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
+	xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:oauth="http://www.mulesoft.org/schema/mule/oauth" xmlns:os="http://www.mulesoft.org/schema/mule/os" xmlns:oauth2-provider="http://www.mulesoft.org/schema/mule/oauth2-provider" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+http://www.mulesoft.org/schema/mule/oauth2-provider http://www.mulesoft.org/schema/mule/oauth2-provider/current/mule-oauth2-provider.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/oauth http://www.mulesoft.org/schema/mule/oauth/current/mule-oauth.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd">
+    <http:listener-config name="transaction-6-httpListenerConfig">
+        <http:listener-connection host="0.0.0.0" port="8081" />
+    </http:listener-config>
+    <apikit:config name="transaction-6-config" api="resource::5a9caf8d-594a-4a59-b0c3-96ea0a9fa04e:transaction-6:1.0.0:raml:zip:transaction-6.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="0e9d0ce1-7f62-423c-bf22-954a9add3d49" >
+		<http:listener-connection host="localhost" port="8082" />
+	</http:listener-config>
+	<os:object-store name="client_ObjectStore" doc:name="Object store" doc:id="dc474444-207c-4003-b0d1-fcf02cf1f0fe" />
+	<os:object-store name="token_ObjectStore" doc:name="Object store" doc:id="6aad14fa-ad7a-4178-86dd-d66f1e2ec5e8" />
+	<oauth2-provider:config name="OAuth2_Provider_Config" doc:name="OAuth2 Provider Config" doc:id="ee155a85-d0d4-4119-9afa-a2e03a482d4c" providerName="Oauth_Provider" listenerConfig="transaction-6-httpListenerConfig" clientStore="client_ObjectStore" supportedGrantTypes="CLIENT_CREDENTIALS" >
+		<oauth2-provider:token-config tokenStore="token_ObjectStore" >
+			<oauth2-provider:refresh-token-strategy >
+				<oauth2-provider:single-refresh-token objectStore="token_ObjectStore" />
+			</oauth2-provider:refresh-token-strategy>
+		</oauth2-provider:token-config>
+	</oauth2-provider:config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="a152e046-784e-47a6-b522-8699bcf00ce5" >
+		<http:request-connection host="localhost" port="8081">
+			<http:authentication >
+				<oauth:client-credentials-grant-type clientId="#[vars.client_id]" clientSecret="#[vars.client_secret]" tokenUrl="http://localhost:8081/token" >
+					<oauth:token-manager objectStore="token_ObjectStore" />
+				</oauth:client-credentials-grant-type>
+			</http:authentication>
+		</http:request-connection>
+	</http:request-config>
+	<file:config name="File_Config" doc:name="File Config" doc:id="2b3bc2c2-0845-41a5-8346-37fd335909c3" >
+		<file:connection workingDir="${fileWorkingDir}" />
+	</file:config>
+	<configuration-properties doc:name="Configuration properties" doc:id="ba2a14ae-dec6-4270-add6-3f4356dd126f" file="flatfileconfig.properties" />
+	<flow name="transaction-6-mockResponse">
+        <http:listener config-ref="transaction-6-httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="transaction-6-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:BAD_REQUEST">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Bad request"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">400</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Method not allowed"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">405</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_ACCEPTABLE">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not acceptable"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">406</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Unsupported media type"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">415</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not Implemented"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">501</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="transaction-6-console">
+        <http:listener config-ref="transaction-6-httpListenerConfig" path="/console/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:console config-ref="transaction-6-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="get:\transaction6\(Credited-Account-Number):transaction-6-config">
+        <ee:transform doc:name="get credit account number">
+            <ee:variables>
+                <ee:set-variable variableName="Credited-Account-Number">attributes.uriParams.'Credited-Account-Number'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <ee:transform doc:name="Mock response">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  "RFI-BIC": "EWBCPHMMXXX",
+  "OFI-BIC": "DBPHPHMMXXX",
+  "End-to-End-ID": "a25db01a40ff4e629921b71f39dba551",
+  "Credited-Account-Number": 200028027884,
+  "Credited-Account-Name": "LIZEL B LOPEZ",
+  "Credit-Currency": "PHP",
+  "Credited-Amount": 431404
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="oauth-implFlow1" doc:id="79fd1207-f923-4067-b5ee-f9337dd85ba8" >
+		<http:listener doc:name="Listener" doc:id="474da37f-d5a5-4847-8583-2164e72550e8" config-ref="transaction-6-httpListenerConfig" path="/create-client"/>
+		<oauth2-provider:create-client doc:name="Create client" doc:id="3926adf2-c074-40e2-afbe-e7121a31844c" config-ref="OAuth2_Provider_Config" clientId="#[attributes.headers.client_id]" secret="#[attributes.headers.client_secret]" clientName="#[attributes.headers.client_name]" authorizedGrantTypes='#[["CLIENT_CREDENTIALS"]]' failIfPresent="true" type="CONFIDENTIAL"/>
+		<set-payload value='#["client created"]' doc:name="Set Payload" doc:id="3e360d69-e1cd-4df7-895a-a60d6ee07c9a" />
+	</flow>
+	<flow name="transaction-6Flow" doc:id="bdd0a8ae-3548-4aa2-a001-b1d3be0a875b" >
+		<http:listener doc:name="Listener" doc:id="c567e513-bddb-48a3-8290-13b08d989967" config-ref="transaction-6-httpListenerConfig" path="/authorization">
+			<http:error-response statusCode="#[vars.httpStatus]" reasonPhrase="#[vars.reason]">
+				<http:body ><![CDATA[#[output json --- 
+{
+	"error":message.payload
+}]]]></http:body>
+			</http:error-response>
+		</http:listener>
+		<set-variable value="#[attributes.headers.client_id]" doc:name="Client ID" doc:id="92e32d8b-6e7a-4df0-8e8d-d454293b77bf" variableName="client_id"/>
+		<set-variable value="#[attributes.headers.client_secret]" doc:name="Client Secret" doc:id="76e424b6-4282-444a-b989-bb784c41bf92" variableName="client_secret"/>
+		<file:read doc:name="Read the EIF File" doc:id="3c838cfd-731a-40ff-8561-654012149673" config-ref="File_Config" path="${fileReadPath}" outputMimeType="application/flatfile; schemapath=${schemaPath}"/>
+		<ee:transform doc:name="Json Payload" doc:id="21123878-a2ce-42fa-b68c-d209910186f0" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger1" doc:id="eedde6dd-7aba-4c82-a470-f9344e09c886" message="#[payload]"/>
+		<ee:transform doc:name="Fetch Credit Account Number" doc:id="dad5dc33-50e6-42e0-a944-9bb4544644c4" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"data":payload..."Beneficiary Account No"[0]
+} ]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<set-variable value="#[payload.data]" doc:name="Account Number" doc:id="668f86fc-bd13-44c9-801a-97b562d01814" variableName="Acct_no"/>
+		<logger level="INFO" doc:name="Logger2" doc:id="5d185556-61fd-4d34-80e2-6edc125af622" message='#[vars.Acct_no]'/>
+		<http:request method="GET" doc:name="Mock Service Request" doc:id="e64fa96f-3c68-4655-a929-34bba007cca7" config-ref="HTTP_Request_configuration" path="/api/transaction6/{Credited-Account-Number}">
+			<http:uri-params ><![CDATA[#[{'Credited-Account-Number':vars.Acct_no}]]]></http:uri-params>
+		</http:request>
+		<logger level="INFO" doc:name="Logger3" doc:id="3c5f6431-9994-477a-9d70-c418dc2c892d" message="#[payload]"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="2ba95c79-22a8-41f5-86b0-1f5a127ccd65" type="HTTP:SECURITY">
+				<ee:transform doc:name="Transform Message" doc:id="65fb045f-b7c5-4d4e-9375-e3bbea3cce48" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"error": "invalid_client",
+	"error_description": "Invalid credentials",
+	"responseStatus": 401,
+	"error_Message": "UNAUTHORIZED",		
+}]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatus" ><![CDATA[401]]></ee:set-variable>
+						<ee:set-variable variableName="reason" ><![CDATA["UNAUTHORIZED"]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</on-error-propagate>
+		</error-handler>
+		
+	</flow>
+</mule>
